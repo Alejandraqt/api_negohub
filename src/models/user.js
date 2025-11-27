@@ -16,9 +16,9 @@ const userSchema = mongoose.Schema({
   },
 });
 
-userSchema.methods.encryptClave = async (clave) => {
+userSchema.methods.encryptClave = async (contrasenia) => {
   const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(clave, salt);
+  return bcrypt.hash(contrasenia, salt);
 };
 
 module.exports = mongoose.model("User", userSchema);
