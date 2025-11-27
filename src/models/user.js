@@ -2,7 +2,7 @@ const mongoose = require("mongoose"); // importando el componente mongoose
 const bcrypt = require("bcrypt"); // importando el componente bcrypt
 
 const userSchema = mongoose.Schema({
-  usuario: {
+  nombre: {
     type: String,
     required: false,
   },
@@ -10,15 +10,15 @@ const userSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  clave: {
+  contrasenia: {
     type: String,
     required: true,
   },
 });
 
-userSchema.methods.encryptClave = async (clave) => {
+userSchema.methods.encryptClave = async (contrasenia) => {
   const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(clave, salt);
+  return bcrypt.hash(contrasenia, salt);
 };
 
 module.exports = mongoose.model("User", userSchema);

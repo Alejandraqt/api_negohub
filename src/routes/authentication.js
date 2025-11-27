@@ -7,15 +7,15 @@ const verifyToken = require("./validate_token");
 
 //Revisar esta forma de autenticarse https://www.digitalocean.com/community/tutorials/nodejs-jwt-expressjs
 router.post("/signup", async (req, res) => {
-  const { usuario, correo, clave } = req.body;
+  const { nombre, correo, contrasenia } = req.body;
   const user = new userSchema({
-    usuario: usuario,
+    nombre: nombre,
     correo: correo,
-    clave: clave,
+    contrasenia: contrasenia,
   });
-  user.clave = await user.encryptClave(user.clave);
+  user.contrasenia = await user.encryptcontrasenia(user.contrasenia);
   await user.save(); //save es un método de mongoose para guardar datos en MongoDB //segundo parámetro: un texto que hace que el código generado sea único //tercer parámetro: tiempo de expiración (en segundos, 24 horas en segundos)
-  //primer parámetro: payload - un dato que se agrega para generar el token
+  //primer parámetro: payload - un dato que se agrega para generar el token clave
   const token = jwt.sign({ id: user._id }, process.env.SECRET, {
     expiresIn: 60 * 60 * 24, //un día en segundos
   });
@@ -29,25 +29,48 @@ router.post("/signup", async (req, res) => {
 //inicio de sesión
 router.post("/login", async (req, res) => {
   // validaciones
-  const { error } = userSchema.validate(req.body.correo, req.body.clave);
+  const { error } = userSchema.validate(req.body.correo, req.body.contrasenia);
   if (error) return res.status(400).json({ error: error.details[0].message });
   //Buscando el usuario por su dirección de correo
   const user = await userSchema.findOne({ correo: req.body.correo });
 
   //validando si no se encuentra
   if (!user)
-    return res.status(400).json({ error: "Usuario o clave incorrectos" });
+    return res.status(400).json({ error: "Usuario o contrasenia incorrectos" });
 
   //Transformando la contraseña a su valor original para
-  //compararla con la clave que se ingresa en el inicio de sesión
-  const validPassword = await bcrypt.compare(req.body.clave, user.clave);
+  //compararla con la contrasenia que se ingresa en el inicio de sesión
+if (!user.contrasenia) {
+    return res.status(400).json({ error: "Error en la configuración del usuario" });
+  }
+
+  // Verificar si la contraseña está hasheada (los hashes de bcrypt empiezan con $2a$, $2b$ o $2y$)
+  const isHashed = user.contrasenia.startsWith('$2a$') || 
+                   user.contrasenia.startsWith('$2b$') || 
+                   user.contrasenia.startsWith('$2y$');
+  
+  let validPassword = false;
+  
+  if (isHashed) {
+    // La contraseña está hasheada, comparar normalmente
+    validPassword = await bcrypt.compare(req.body.contrasenia, user.contrasenia);
+  } else {
+    // La contraseña está en texto plano (usuarios antiguos), comparar directamente
+    // y luego hashearla para actualizar en la base de datos
+    if (user.contrasenia === req.body.contrasenia) {
+      validPassword = true;
+      // Hashear la contraseña y actualizar el usuario
+      user.contrasenia = await user.encryptClave(user.contrasenia);
+      await user.save();
+    }
+  }
   let accessToken = null;
   if (!validPassword) {
-    return res.status(400).json({ error: "Usuario o clave incorrectos" });
+    return res.status(400).json({ error: "Usuario o contrasenia incorrectos" });
   } else {
     const expiresIn = 24 * 60 * 60;
     accessToken = jwt.sign(
-      { id: user.id }, 
+      { id: user._id }, 
       process.env.SECRET, {
       expiresIn: expiresIn
     });
@@ -56,10 +79,11 @@ router.post("/login", async (req, res) => {
       id: user._id,
       usuario: user.usuario,
       correo: user.correo,
-      clave: user.clave,
+      contrasenia: user.contrasenia,
       accessToken: accessToken,
       expiresIn: expiresIn,
     });*/
+    
     res.json({accessToken});
   }
 });

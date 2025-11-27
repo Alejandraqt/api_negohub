@@ -25,10 +25,11 @@ router.get("/usuario", (req, res) => {
 //Actualización de un usuario por ID
 router.put("/usuario/:id", (req, res) => {
     const { id } = req.params;
-    const { nombre, correo, rol } = req.body;
+    const { nombre, correo} = req.body;
+    
     usuarioSchema
         .updateOne({ _id: id }, {
-            $set: { nombre, correo, rol }
+            $set: { nombre, correo }
         })
         .then((data) => res.json(data))
         .catch((error) => res.json({ message: error }));
@@ -46,6 +47,15 @@ router.delete("/usuario/:id", (req, res) => {
         .catch((error) => {
             res.json({ message: error });
         });
+});
+
+
+//Consulta de usuario por ID
+router.get("/usuario/:id", (req, res) => {
+    const { id } = req.params;
+    usuarioSchema.findById(id)
+        .then((data) => res.json(data))
+        .catch((error) => res.json({ message: error }));
 });
 
 module.exports = router;
